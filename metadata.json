@@ -1,0 +1,5 @@
+{
+  "name": "BestMama-Finance",
+  "description": "Un calculator de profitabilitate pentru magazine online (e-commerce) care calculează marjele, TVA-ul și profitul brut pe baza comenzilor și costurilor.",
+  "requestFramePermissions": []
+}
