@@ -50,6 +50,7 @@ const App: React.FC = () => {
     marketingCost: 0,
     dailyFixedExpenses: 0,
     daysCount: 1, // Default to 1 day for manual entry
+    markupPercent: 100, // Default to 100% markup (cost is 50% of net value)
   });
 
   const [importedData, setImportedData] = useState<DailyRecord[]>([]);
@@ -134,8 +135,9 @@ const App: React.FC = () => {
     // 1. Valoare Neta fara TVA = Valoare Neta (cu TVA) / (1 + TVA)
     const netValueExVat = inputs.netValueWithVat / (1 + VAT_RATE);
 
-    // 2. Costul Produse = Valoare Neta fara TVA / 2
-    const productCost = netValueExVat / 2;
+    // 2. Costul Produse = Valoare Neta fara TVA / (1 + Adaos / 100)
+    const markupFactor = 1 + (inputs.markupPercent / 100);
+    const productCost = markupFactor > 0 ? netValueExVat / markupFactor : netValueExVat;
 
     // 3. Calcul Costuri Fixe Totale
     const totalFixedCosts = inputs.dailyFixedExpenses * inputs.daysCount;
@@ -155,6 +157,14 @@ const App: React.FC = () => {
       ? inputs.totalValueWithShipping / inputs.ordersCount 
       : 0;
 
+    // Valoare Adaos Comercial
+    const markupValue = netValueExVat - productCost;
+
+    // ROI (Return on Investment) - based on Marketing Cost
+    const roi = inputs.marketingCost > 0
+      ? (grossProfit / inputs.marketingCost) * 100
+      : 0;
+
     return {
       netValueExVat,
       productCost,
@@ -162,7 +172,9 @@ const App: React.FC = () => {
       vatAmount,
       profitMargin,
       averageOrderValue,
-      totalFixedCosts
+      totalFixedCosts,
+      markupValue,
+      roi
     };
   }, [inputs]);
 
@@ -189,13 +201,13 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-indigo-600 rounded-lg shadow-lg shadow-indigo-200">
               <Calculator className="w-6 h-6 text-white" />
             </div>
             <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-600">
-              E-Com Calc
+              BestMama Finance
             </h1>
           </div>
           <div className="text-xs sm:text-sm text-slate-500 font-medium bg-slate-100 px-3 py-1 rounded-full">
@@ -204,7 +216,7 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
@@ -291,12 +303,12 @@ const App: React.FC = () => {
                 <div className="w-full h-px bg-slate-100 my-2"></div>
 
                 <InputField
-                  label="Valoare Netă (cu TVA)"
+                  label="Vânzări produse cu TVA"
                   icon={DollarSign}
                   prefix="RON"
                   value={inputs.netValueWithVat}
                   onChange={handleInputChange('netValueWithVat')}
-                  description="Venit din produse (fără transport, TVA inclus)."
+                  description="Valoarea totală încasată din produse, cu TVA inclus și fără transport."
                 />
                 <InputField
                   label="Cost de Livrare"
@@ -314,6 +326,43 @@ const App: React.FC = () => {
                   onChange={handleInputChange('totalValueWithShipping')}
                   description="Suma totală încasată (Produse + Transport)."
                 />
+              </div>
+            </div>
+
+            {/* Adaos Comercial Card */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+               <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <Percent className="w-5 h-5 text-emerald-500" />
+                Adaos Comercial (%)
+              </h2>
+              <div className="space-y-4">
+                <InputField
+                  label="Procent Adaos Comercial"
+                  icon={Percent}
+                  prefix="%"
+                  value={inputs.markupPercent}
+                  onChange={handleInputChange('markupPercent')}
+                  description="Adaosul aplicat costului de achiziție pentru a stabili prețul de vânzare net. Ex: 100% înseamnă dublarea prețului (costul e 50% din preț)."
+                />
+                
+                {inputs.markupPercent >= 0 && (
+                   <div className="p-3 bg-emerald-50/60 rounded-lg border border-emerald-100 text-xs text-emerald-800 space-y-1">
+                     <div className="flex justify-between items-center">
+                       <span>Factor multiplicare:</span>
+                       <span className="font-bold">{(1 + inputs.markupPercent / 100).toFixed(2)}x</span>
+                     </div>
+                     <div className="flex justify-between items-center">
+                       <span>Costul produsului:</span>
+                       <span className="font-bold">
+                         {(100 / (1 + inputs.markupPercent / 100)).toFixed(1)}% din prețul net (fără TVA)
+                       </span>
+                     </div>
+                     <div className="flex justify-between items-center pt-1 border-t border-emerald-100/50">
+                       <span>Valoare Adaos:</span>
+                       <span className="font-bold">{formatCurrency(metrics.markupValue)}</span>
+                     </div>
+                   </div>
+                )}
               </div>
             </div>
 
@@ -371,9 +420,10 @@ const App: React.FC = () => {
             <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 text-sm text-indigo-800">
               <p className="font-semibold mb-1">Notă de calcul:</p>
               <ul className="list-disc pl-4 space-y-1 opacity-80">
-                <li>Cost Produse = Valoare Netă (fără TVA) ÷ 2</li>
+                <li>Cost Produse = Net fără TVA ÷ {(1 + inputs.markupPercent / 100).toFixed(2)} (Adaos {inputs.markupPercent}%)</li>
                 <li>Valoare Netă (fără TVA) = Valoare cu TVA ÷ {(1 + VAT_RATE).toFixed(2)}</li>
                 <li>Profit Brut = Net - Marketing - Produse - Fixe</li>
+                <li>ROI (Marketing) = (Profit final ÷ Cost Marketing) × 100</li>
               </ul>
             </div>
           </div>
@@ -395,7 +445,7 @@ const App: React.FC = () => {
                 value={formatCurrency(metrics.productCost)}
                 icon={Package}
                 colorClass="text-red-500"
-                subValue="Calculat la 50% din net"
+                subValue={`Adaos ${inputs.markupPercent}% (${(inputs.markupPercent >= 0 ? (100 / (1 + inputs.markupPercent / 100)) : 100).toFixed(0)}% din net)`}
               />
               <ResultCard
                 title="Profit Brut"
@@ -407,7 +457,7 @@ const App: React.FC = () => {
             </div>
 
             {/* Extra Metrics Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-white p-4 rounded-xl border border-slate-200 flex justify-between items-center shadow-sm">
                  <div>
                    <p className="text-xs text-slate-500 font-medium uppercase">Comandă Medie (AOV)</p>
@@ -424,6 +474,17 @@ const App: React.FC = () => {
                  </div>
                  <div className="p-2 bg-slate-100 rounded-full">
                    <Wallet className="w-5 h-5 text-slate-500" />
+                 </div>
+              </div>
+              <div className="bg-white p-4 rounded-xl border border-slate-200 flex justify-between items-center shadow-sm">
+                 <div>
+                   <p className="text-xs text-slate-500 font-medium uppercase">ROI (Marketing)</p>
+                   <p className={`text-xl font-bold ${inputs.marketingCost > 0 ? (metrics.roi >= 0 ? 'text-emerald-600' : 'text-rose-600') : 'text-slate-400'}`}>
+                     {inputs.marketingCost > 0 ? `${metrics.roi.toFixed(1)}%` : 'N/A – fără cost de marketing'}
+                   </p>
+                 </div>
+                 <div className="p-2 bg-slate-100 rounded-full">
+                   <TrendingUp className="w-5 h-5 text-slate-500" />
                  </div>
               </div>
             </div>
