@@ -6,6 +6,8 @@ export interface CalculationMetrics {
   profitMargin: number;
   averageOrderValue: number;
   totalFixedCosts: number; // Costuri fixe totale (zilnic * zile)
+  markupValue: number; // Valoarea adaosului comercial
+  roi: number; // ROI față de costul de marketing
 }
 
 export interface InputState {
@@ -16,6 +18,7 @@ export interface InputState {
   marketingCost: number; // Cost Marketing
   dailyFixedExpenses: number; // Cheltuieli fixe zilnice
   daysCount: number; // Numarul de zile pentru calcul
+  markupPercent: number; // Adaos comercial în procente (ex: 100%)
 }
 
 export interface DailyRecord {
